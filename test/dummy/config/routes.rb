@@ -1,4 +1,3 @@
 Rails.application.routes.draw do
-
-  mount ImagineCms::Engine => "/imagine_cms"
+  mount EmailCampaign::Engine => "/email_campaign"
 end
