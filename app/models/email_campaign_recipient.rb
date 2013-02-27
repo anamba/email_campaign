@@ -5,7 +5,11 @@ class EmailCampaignRecipient < ActiveRecord::Base
   
   belongs_to :email_campaign
   
-  before_save :check_for_duplicates, :check_email_address, :check_for_unsubscribe
+  before_save :check_name, :check_for_duplicates, :check_email_address, :check_for_unsubscribe
+  
+  def check_name
+    self.name = nil if name.blank?
+  end
   
   def check_for_duplicates
     if self.class.where(:campaign_id => campaign_id, :email_address => rcpt.email_address).count > 0
@@ -73,6 +77,9 @@ class EmailCampaignRecipient < ActiveRecord::Base
     true
   end
   
+  def to_s
+    name.blank? ? email_address : "#{name} <#{email_address}>"
+  end
   
   def valid_email_address?(value)
     begin
