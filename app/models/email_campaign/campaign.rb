@@ -1,8 +1,10 @@
-class EmailCampaign < ActiveRecord::Base
-  attr_accessible :name, :mailer, :method, :params_yaml, :deliver_at
+class EmailCampaign::Campaign < ActiveRecord::Base
+  set_table_name "email_campaigns"
+  
+  attr_accessible :name, :mailer, :method, :params_yaml, :deliver_at,
                   :finalized, :queued, :delivered
   
-  has_many :recipients, :class_name => 'EmailCampaignRecipient'
+  has_many :recipients, :class_name => 'EmailCampaign::Recipient'
   
   # new_recipients should be an Array of objects that respond to #email, #name, and #subscriber_id
   # (falls back to #id if #subscriber_id doesn't exist; either way, this id should be unique)

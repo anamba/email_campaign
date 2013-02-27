@@ -1,4 +1,6 @@
-class EmailCampaignRecipient < ActiveRecord::Base
+class EmailCampaign::Recipient < ActiveRecord::Base
+  set_table_name "email_campaign_recipients"
+  
   attr_accessible :name, :email_address,
                   :ready, :duplicate, :invalid_email, :unsubscribed,
                   :subscriber_class_name, :subscriber_id
