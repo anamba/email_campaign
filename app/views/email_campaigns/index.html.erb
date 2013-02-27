@@ -1,0 +1,36 @@
+<h1>Email Campaigns</h1>
+
+<%= flash_message %>
+
+<h2>Drafts</h2>
+<%- if @drafts.empty? -%>
+  No drafts.
+<%- else -%>
+<ul>
+  <%- @drafts.each do |e| -%>
+  <li><%= link_to e.name, e %></li>
+  <%- end -%>
+</ul>
+<%- end -%>
+
+<h2>Queued for Sending</h2>
+<%- if @queued.empty? -%>
+  Nothing queued.
+<%- else -%>
+<ul>
+  <%- @queued.each do |e| -%>
+  <li><%= link_to e.name, e %></li>
+  <%- end -%>
+</ul>
+<%- end -%>
+
+<h3>Recently Sent</h3>
+<%- if @sent.empty? -%>
+  Nothing sent recently.
+<%- else -%>
+<ul>
+  <%- @sent.each do |e| -%>
+  <li><%= link_to e.name, e %></li>
+  <%- end -%>
+</ul>
+<%- end -%>

@@ -1,0 +1,36 @@
+=email_campaign
+
+For mailings related to Rails apps, email_campaign is designed to be a more flexible, more integrated (yet well-abstracted) alternative to email campaign services like Campaign Monitor and MailChimp. Designed to use SendGrid for delivery, but this is easy changed.
+
+Does its best to prevent clients from sending too frequently and ruining your sender reputation, but no guarantees.
+
+=Roadmap
+
+0.x: Basic campaign authoring and delivery, using template created by developer as a standard Rails mailer layout.
+1.0: Robust enough for production use, will be able to deal with 90% of common failure modes on its own.
+1.2: Delivery stats and graphs.
+
+=Current Status
+
+Still pre-1.0. If you have some time, write some code or tests, exercise existing functionality on non-critical apps, submit bug reports... otherwise stay away for now.
+
+=Getting Help
+
+Get paid support for EmailCampaign straight from the people who made it: {Bigger Bird Creative, Inc.}[https://www.biggerbird.com] Not required, of course. :-) Free support is up top (Issues).
+
+=Customizing & Contributing
+
+Pull requests always appreciated (recommend getting in touch first). If companies or individuals are willing to sponsor major features on the roadmap (or features that meet their own needs) development can proceed more quickly.
+
+=Dependencies
+
+Developed and tested with MRI ruby 1.9.3.
+
+Dependencies:
+* mail (email)
+
+=License & Copyright
+
+Distributed under MIT license. Copyright (c) 2013 Aaron Namba <aaron@biggerbird.com>
+
+{<img src="https://travis-ci.org/anamba/email_campaign.png" />}[https://travis-ci.org/anamba/email_campaign]
