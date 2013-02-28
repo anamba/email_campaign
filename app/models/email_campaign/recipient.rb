@@ -1,13 +1,40 @@
 class EmailCampaign::Recipient < ActiveRecord::Base
-  set_table_name "email_campaign_recipients"
+  self.table_name = 'email_campaign_recipients'
   
   attr_accessible :name, :email_address,
+                  :subscriber_class_name, :subscriber_id,
                   :ready, :duplicate, :invalid_email, :unsubscribed,
-                  :subscriber_class_name, :subscriber_id
+                  :failed, :failed_at, :failure_reason,
+                  :delivered, :delivered_at
   
   belongs_to :campaign, :class_name => 'EmailCampaign::Campaign', :foreign_key => 'email_campaign_id'
   
-  before_save :check_name, :check_for_duplicates, :check_email_address, :check_for_unsubscribe
+  validates_presence_of :email_address, :subscriber_id
+  
+  before_create :generate_identifier, :check_for_duplicates
+  before_save :check_name, :check_email_address, :check_for_unsubscribe
+  
+  def generate_identifier(regenerate = false)
+    return identifier if identifier && !regenerate
+    
+    attempts = 0
+    new_identifier = nil
+    
+    # 28^8 = 378 billion possibilities
+    validchars = 'ABCDEFGHJKLMNPQRTUVWXY346789'
+    
+    while new_identifier.nil? && attempts < 10
+      # generate a 8 character identifier
+      new_identifier = ''
+      8.times { new_identifier << validchars[rand(validchars.length)] }
+      
+      new_identifier = nil if self.class.count > 0 && self.class.where(:identifier => new_identifier).first
+      
+      attempts += 1
+    end
+    
+    self.identifier = new_identifier
+  end
   
   def check_name
     self.name = nil if name.blank?
@@ -41,8 +68,6 @@ class EmailCampaign::Recipient < ActiveRecord::Base
     if self.class.where(:email_address => email_address, :unsubscribed => true).count > 0
       self.unsubscribed = true
       self.ready = false
-    else
-      self.unsubscribed = false
     end
     
     true
@@ -56,36 +81,113 @@ class EmailCampaign::Recipient < ActiveRecord::Base
     end
   end
   
+  # resets failed and delivered flags... use sparingly
+  def requeue
+    queue && update_attributes(:failed => false, :failed_at => nil, :failure_reason => nil,
+                               :delivered => false, :delivered_at => nil)
+  end
+  
   def deliver
-    # if we want to allow retries in the future we can change this bit
-    if attempted && attempts > 0
-      puts "Already attempted, not going to try again."
+    if !ready
+      puts "Not in ready state"
       return false
     end
     
+    if delivered
+      puts "Already delivered."
+      return true  # not sure yet whether returning true is a good idea, but seems harmless enough
+    end
+    
+    # if we want to allow retries in the future we can change this bit
+    # if attempted && attempts > 0
+    #   puts "Already attempted, not going to try again."
+    #   update_attributes(:ready => false)
+    #   return false
+    # end
+    
     if failed
       puts "Already failed (reason: #{failure_reason}), not going to try again."
+      update_attributes(:ready => false)
       return false
     end
     
     unless update_column(:attempted, true) && increment(:attempts)
       print "Could not update 'attempted' flag, will not proceed for fear of sending multiple copies"
+      update_attributes(:ready => false, :failed => true, :failed_at => Time.now.utc, :failure_reason => "Could not update 'attempted' flag, will not proceed for fear of sending multiple copies")
       return false
     end
     
-    if email_address !~ /^[\w\d]+([\w\d\!\#\$\%\&\*\+\-\/\=\?\^\`\{\|\}\~\.]*[\w\d]+)*@([-\w\d]+\.)+[\w]{2,}$/
+    if !valid_email_address?(email_address)
       print "Invalid email address: #{email_address}"
-      self.failed = true
-      self.failure_reason = "Invalid email address"
-      save
+      update_attributes(:ready => false, :failed => true, :failed_at => Time.now.utc, :failure_reason => "Invalid email address")
       return false
     end
     
     # TODO: wrap this with begin;rescue;end and set failed/failure_reason in case of exception
-    Mailer.email_campaign(self).deliver
+    begin
+      campaign.mailer.constantize.send(campaign.method.to_sym, self).deliver
+      update_attributes(:ready => false, :delivered => true, :delivered_at => Time.now.utc)
+    rescue Exception => e
+      puts e.message
+      update_attributes(:ready => false, :failed => true, :failed_at => Time.now.utc, :failure_reason => "#{e.class.name}: #{e.message}")
+      return false
+    end
     
     true
   end
+  
+  def self.record_open(identifier, params = {})
+    r = find_by_identifier(identifier)
+    r.record_open(params) if r
+  end
+  
+  def record_open(params = {})
+    self.class.transaction do
+      self.opened = true
+      self.opened_at ||= Time.now.utc
+      self.opens += 1
+      save
+    end
+  end
+  
+  def self.record_click(identifier, params = {})
+    r = find_by_identifier(identifier)
+    r.record_click(params) if r
+  end
+  
+  def record_click(params = nil)
+    self.class.transaction do
+      self.opened = true
+      self.opened_at ||= Time.now.utc
+      self.opens ||= 1
+      self.clicked = true
+      self.clicked_at ||= Time.now.utc
+      self.clicks += 1
+    end
+  end
+  
+  def self.unsubscribe(identifier, params = {})
+    r = find_by_identifier(identifier)
+    r.unsubscribe(params) if r
+  end
+  
+  def unsubscribe(params = nil)
+    self.unsubscribed = true
+    save
+  end
+  
+  def self.resubscribe(identifier, params = {})
+    r = find_by_identifier(identifier)
+    r.resubscribe(params) if r
+  end
+  
+  def resubscribe(params = nil)
+    self.class.transaction do
+      self.class.where(:email_address => email_address, :unsubscribed => true).each { |r| r.update_column(:unsubscribed, false) }
+    end
+  end
+  
+  
   
   def to_s
     name.blank? ? email_address : "#{name} <#{email_address}>"

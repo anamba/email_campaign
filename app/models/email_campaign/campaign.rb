@@ -1,5 +1,5 @@
 class EmailCampaign::Campaign < ActiveRecord::Base
-  set_table_name "email_campaigns"
+  self.table_name = 'email_campaigns'
   
   attr_accessible :name, :mailer, :method, :params_yaml, :deliver_at,
                   :finalized, :queued, :delivered,
@@ -46,20 +46,11 @@ class EmailCampaign::Campaign < ActiveRecord::Base
     end
     
     # update_attributes(:delivered => true, :delivered_at => Time.now.utc)
-    update_attributes(:delivered => true, :delivery_finished_at => Time.now.utc)
+    update_attributes(:queued => false, :delivered => true, :delivery_finished_at => Time.now.utc)
   end
   
   def process_delivery
-    sent = []
-    error = []
-    recipients.where(:ready => true).each do |r|
-      # begin
-        mailer.constantize.send(method.to_sym, r).deliver
-        sent << r
-      # rescue Exception => e
-        # error << [ r, e ]
-      # end
-    end
+    recipients.where(:ready => true).each(&:deliver)
   end
   
 end
