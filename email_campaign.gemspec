@@ -14,22 +14,23 @@ Gem::Specification.new do |s|
   s.homepage    = "https://github.com/anamba/email_campaign"
   s.summary     = %q{Email campaign delivery for Rails apps}
   s.description = %q{See README for details.}
-
+  
   s.required_ruby_version     = '>= 1.9.3'
   s.required_rubygems_version = '>= 1.8.11'
-
+  
   s.license = 'MIT'
   
   # s.rubyforge_project = "email_campaign"
-
+  
   s.files         = `git ls-files`.split("\n")
   s.test_files    = `git ls-files -- {test,spec,features}/*`.split("\n")
   s.executables   = `git ls-files -- bin/*`.split("\n").map{ |f| File.basename(f) }
   s.require_paths = ["lib"]
   
   s.add_dependency "actionmailer",        "~> 3.2.12"
-  s.add_dependency "mail",                "~> 2.4.4"
-  s.add_dependency "net-dns",             "~> 0.7.1"
+  s.add_dependency "mail",                "~> 2.4.0"
+  s.add_dependency "delayed_job",         "~> 3.0.0"
+  s.add_dependency "net-dns",             "~> 0.7.0"
   
   s.add_development_dependency "sqlite3"
 end
