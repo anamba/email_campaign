@@ -5,39 +5,47 @@ class EmailCampaign::Recipient < ActiveRecord::Base
                   :ready, :duplicate, :invalid_email, :unsubscribed,
                   :subscriber_class_name, :subscriber_id
   
-  belongs_to :email_campaign
+  belongs_to :campaign, :class_name => 'EmailCampaign::Campaign', :foreign_key => 'email_campaign_id'
   
   before_save :check_name, :check_for_duplicates, :check_email_address, :check_for_unsubscribe
   
   def check_name
     self.name = nil if name.blank?
+    
+    true
   end
   
   def check_for_duplicates
-    if self.class.where(:campaign_id => campaign_id, :email_address => rcpt.email_address).count > 0
+    if self.campaign.recipients.where(:email_address => email_address).where('id != ?', id).count > 0
       self.ready = false
       self.duplicate = true
     else
       self.duplicate = false
     end
+    
+    true
   end
   
   def check_email_address
-    if valid_email_address?(rcpt.email_address)
+    if valid_email_address?(email_address)
       self.invalid_email = false
     else
       self.ready = false
       self.invalid_email = true
     end
+    
+    true
   end
   
   def check_for_unsubscribe
-    if self.class.where(:email_address => rcpt.email_address, :unsubscribed => true).count > 0
+    if self.class.where(:email_address => email_address, :unsubscribed => true).count > 0
       self.unsubscribed = true
       self.ready = false
     else
       self.unsubscribed = false
     end
+    
+    true
   end
   
   def queue
