@@ -9,22 +9,42 @@ class EmailCampaign::Campaign < ActiveRecord::Base
   
   # new_recipients should be an Array of objects that respond to #email, #name, and #subscriber_id
   # (falls back to #id if #subscriber_id doesn't exist; either way, id should be unique within campaign)
-  def add_recipients(new_recipients, limit = nil)
+  def add_recipients(new_recipients)
     new_recipients = [ new_recipients ] unless new_recipients.is_a?(Array)
     
-    count = 0
+    processed = 0
+    skipped = 0
+    valid = 0
+    invalid = 0
+    duplicate = 0
+    unsubscribed = 0
+    
     new_recipients.each do |rcpt|
       subscriber_id = rcpt.subscriber_id || rcpt.id
-      # next if subscriber_id && recipients.where(:subscriber_id => subscriber_id).count > 0
+      
+      if subscriber_id && recipients.where(:subscriber_id => subscriber_id).count > 0
+        skipped += 1
+        next
+      end
       
       r = recipients.create(:name => rcpt.name.strip, :email_address => rcpt.email_address.strip,
                             :subscriber_class_name => rcpt.class.name, :subscriber_id => subscriber_id)
       
-      r.queue unless limit && count >= limit
-      count += 1
+      processed += 1
+      case
+        when r.unsubscribed then unsubscribed += 1
+        when r.duplicate then duplicate += 1
+        when r.invalid_email then invalid += 1
+        else valid += 1
+      end
+      
+      r.queue
     end
     
-    recipients.where(:ready => true).count
+    { :processed => processed, :skipped => skipped,
+      :valid => valid, :invalid => invalid,
+      :duplicate => duplicate, :unsubscribed => unsubscribed,
+      :total => recipients.where(:ready => true).count }
   end
   
   def queue(deliver_at = Time.now.utc)
@@ -45,7 +65,6 @@ class EmailCampaign::Campaign < ActiveRecord::Base
       process_delivery
     end
     
-    # update_attributes(:delivered => true, :delivered_at => Time.now.utc)
     update_attributes(:queued => false, :delivered => true, :delivery_finished_at => Time.now.utc)
   end
   

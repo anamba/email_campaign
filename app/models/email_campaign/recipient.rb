@@ -11,8 +11,8 @@ class EmailCampaign::Recipient < ActiveRecord::Base
   
   validates_presence_of :email_address, :subscriber_id
   
-  before_create :generate_identifier, :check_for_duplicates
-  before_save :check_name, :check_email_address, :check_for_unsubscribe
+  before_create :generate_identifier, :check_for_duplicates, :check_for_unsubscribe
+  before_save :check_name, :check_email_address
   
   def generate_identifier(regenerate = false)
     return identifier if identifier && !regenerate
@@ -43,7 +43,7 @@ class EmailCampaign::Recipient < ActiveRecord::Base
   end
   
   def check_for_duplicates
-    if self.campaign.recipients.where(:email_address => email_address).where('id != ?', id).count > 0
+    if campaign.recipients.where(:email_address => email_address).count > 0
       self.ready = false
       self.duplicate = true
     else
@@ -74,7 +74,7 @@ class EmailCampaign::Recipient < ActiveRecord::Base
   end
   
   def queue
-    if !duplicate && !invalid_email && !unsubscribed
+    if !duplicate && !invalid_email && !unsubscribed && !failed
       update_attributes(:ready => true)
     else
       false
@@ -98,13 +98,6 @@ class EmailCampaign::Recipient < ActiveRecord::Base
       return true  # not sure yet whether returning true is a good idea, but seems harmless enough
     end
     
-    # if we want to allow retries in the future we can change this bit
-    # if attempted && attempts > 0
-    #   puts "Already attempted, not going to try again."
-    #   update_attributes(:ready => false)
-    #   return false
-    # end
-    
     if failed
       puts "Already failed (reason: #{failure_reason}), not going to try again."
       update_attributes(:ready => false)
@@ -112,18 +105,17 @@ class EmailCampaign::Recipient < ActiveRecord::Base
     end
     
     unless update_column(:attempted, true) && increment(:attempts)
-      print "Could not update 'attempted' flag, will not proceed for fear of sending multiple copies"
+      puts "Could not update 'attempted' flag, will not proceed for fear of sending multiple copies"
       update_attributes(:ready => false, :failed => true, :failed_at => Time.now.utc, :failure_reason => "Could not update 'attempted' flag, will not proceed for fear of sending multiple copies")
       return false
     end
     
     if !valid_email_address?(email_address)
-      print "Invalid email address: #{email_address}"
+      puts "Invalid email address: #{email_address}"
       update_attributes(:ready => false, :failed => true, :failed_at => Time.now.utc, :failure_reason => "Invalid email address")
       return false
     end
     
-    # TODO: wrap this with begin;rescue;end and set failed/failure_reason in case of exception
     begin
       campaign.mailer.constantize.send(campaign.method.to_sym, self).deliver
       update_attributes(:ready => false, :delivered => true, :delivered_at => Time.now.utc)
@@ -172,7 +164,11 @@ class EmailCampaign::Recipient < ActiveRecord::Base
   end
   
   def unsubscribe(params = nil)
-    self.unsubscribed = true
+    self.class.transaction do
+      self.class.where(:email_address => email_address, :unsubscribed => false).each do |r|
+        r.update_attributes(:unsubscribed => true, :ready => false)
+      end
+    end
     save
   end
   
@@ -183,7 +179,9 @@ class EmailCampaign::Recipient < ActiveRecord::Base
   
   def resubscribe(params = nil)
     self.class.transaction do
-      self.class.where(:email_address => email_address, :unsubscribed => true).each { |r| r.update_column(:unsubscribed, false) }
+      self.class.where(:email_address => email_address, :unsubscribed => true).each do |r|
+        r.update_attributes(:unsubscribed, false)
+      end
     end
   end
   
