@@ -20,22 +20,25 @@ class EmailCampaign::Campaign < ActiveRecord::Base
     unsubscribed = 0
     
     new_recipients.each do |rcpt|
-      subscriber_id = rcpt.subscriber_id || rcpt.id
+      subscriber_id = rcpt.respond_to?(:subscriber_id) ? rcpt.subscriber_id : rcpt.id
       
       if subscriber_id && recipients.where(:subscriber_id => subscriber_id).count > 0
         skipped += 1
         next
       end
       
-      r = recipients.create(:name => rcpt.name.strip, :email_address => rcpt.email_address.strip,
-                            :subscriber_class_name => rcpt.class.name, :subscriber_id => subscriber_id)
-      
       processed += 1
-      case
-        when r.unsubscribed then unsubscribed += 1
-        when r.duplicate then duplicate += 1
-        when r.invalid_email then invalid += 1
-        else valid += 1
+      r = recipients.build(:name => rcpt.name.strip, :email_address => rcpt.email_address.strip,
+                           :subscriber_class_name => rcpt.class.name, :subscriber_id => subscriber_id)
+      if r.save
+        case
+          when r.unsubscribed then unsubscribed += 1
+          when r.duplicate then duplicate += 1
+          when r.invalid_email then invalid += 1
+          else valid += 1
+        end
+      else
+        invalid += 1
       end
       
       r.queue
@@ -69,7 +72,11 @@ class EmailCampaign::Campaign < ActiveRecord::Base
   end
   
   def process_delivery
-    recipients.where(:ready => true).each(&:deliver)
+    recipients.where(:ready => true).each { |r| r.delay.deliver }
+  end
+  
+  def queued_recipients
+    recipients.where(:ready => true)
   end
   
 end

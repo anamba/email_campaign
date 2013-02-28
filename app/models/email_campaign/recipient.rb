@@ -155,6 +155,7 @@ class EmailCampaign::Recipient < ActiveRecord::Base
       self.clicked = true
       self.clicked_at ||= Time.now.utc
       self.clicks += 1
+      save
     end
   end
   
@@ -180,7 +181,7 @@ class EmailCampaign::Recipient < ActiveRecord::Base
   def resubscribe(params = nil)
     self.class.transaction do
       self.class.where(:email_address => email_address, :unsubscribed => true).each do |r|
-        r.update_attributes(:unsubscribed, false)
+        r.update_attributes(:unsubscribed => false)
       end
     end
   end
