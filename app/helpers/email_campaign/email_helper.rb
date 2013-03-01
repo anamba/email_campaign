@@ -22,7 +22,7 @@ module EmailCampaign
     end
     
     def email_web_version_url
-      EmailCampaign::Config.base_url + url_for(:controller => EmailCampaign::Config.controller_name, :action => 'web_version', :method => @method, :k => @identifier)
+      EmailCampaign::Config.base_url + url_for(:controller => EmailCampaign::Config.controller_name, :action => 'web_version', :id => @method, :k => @identifier)
     end
     
   end
