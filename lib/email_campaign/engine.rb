@@ -6,13 +6,20 @@ module EmailCampaign
     config.app_root = root
     middleware.use ::ActionDispatch::Static, "#{root}/public"
     
-    # initializer "email_campaign.assets.precompile" do |config|
-    #   Rails.application.config.assets.precompile += %w( codepress/** dojo/** management.css reset.css )
-    # end
+    initializer "email_campaign.assets.precompile" do |config|
+      Rails.application.config.assets.precompile += %w( email_campaign/open-tracker.gif )
+    end
     
     #
     # activate gems as needed
     #
     
   end
+  
+  class Config
+    class << self
+      attr_accessor :base_url
+    end
+  end
+  
 end
