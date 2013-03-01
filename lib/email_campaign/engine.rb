@@ -10,6 +10,9 @@ module EmailCampaign
       Rails.application.config.assets.precompile += %w( email_campaign/open-tracker.gif )
     end
     
+    require 'email_campaign/config'
+    require 'email_campaign/handler'
+    
     #
     # activate gems as needed
     #
