@@ -26,8 +26,8 @@ class EmailCampaign::Campaign < ActiveRecord::Base
       if subscriber_id && r = recipients.find_by_subscriber_id(subscriber_id)
         if options['force']
           r.requeue
-        else
           valid += 1
+        else
           skipped += 1
         end
         

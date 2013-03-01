@@ -87,8 +87,9 @@ class EmailCampaign::Recipient < ActiveRecord::Base
   
   # resets failed and delivered flags... use sparingly
   def requeue
-    queue && update_attributes(:failed => false, :failed_at => nil, :failure_reason => nil,
-                               :delivered => false, :delivered_at => nil)
+    update_attributes(:failed => false, :failed_at => nil, :failure_reason => nil,
+                      :delivered => false, :delivered_at => nil)
+    queue
   end
   
   def deliver
