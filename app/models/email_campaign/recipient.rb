@@ -14,6 +14,10 @@ class EmailCampaign::Recipient < ActiveRecord::Base
   before_create :generate_identifier, :check_for_duplicates, :check_for_unsubscribe
   before_save :check_name, :check_email_address
   
+  def self.per_page
+    100
+  end
+  
   def generate_identifier(regenerate = false)
     return identifier if identifier && !regenerate
     
