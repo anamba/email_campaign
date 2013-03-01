@@ -16,10 +16,4 @@ module EmailCampaign
     
   end
   
-  class Config
-    class << self
-      attr_accessor :base_url
-    end
-  end
-  
 end
