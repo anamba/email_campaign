@@ -9,7 +9,8 @@ class EmailCampaign::Campaign < ActiveRecord::Base
   
   # new_recipients should be an Array of objects that respond to #email, #name, and #subscriber_id
   # (falls back to #id if #subscriber_id doesn't exist; either way, id should be unique within campaign)
-  def add_recipients(new_recipients)
+  def add_recipients(new_recipients, options = {})
+    options.stringify_keys!
     new_recipients = [ new_recipients ] unless new_recipients.is_a?(Array)
     
     processed = 0
@@ -22,8 +23,14 @@ class EmailCampaign::Campaign < ActiveRecord::Base
     new_recipients.each do |rcpt|
       subscriber_id = rcpt.respond_to?(:subscriber_id) ? rcpt.subscriber_id : rcpt.id
       
-      if subscriber_id && recipients.where(:subscriber_id => subscriber_id).count > 0
-        skipped += 1
+      if subscriber_id && r = recipients.find_by_subscriber_id(subscriber_id)
+        if options['force']
+          r.requeue
+        else
+          valid += 1
+          skipped += 1
+        end
+        
         next
       end
       
