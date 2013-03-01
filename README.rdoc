@@ -1,6 +1,6 @@
 =email_campaign
 
-For mailings related to Rails apps, email_campaign is designed to be a more flexible, more integrated (yet well-abstracted) alternative to email campaign services like Campaign Monitor and MailChimp. Designed to use SendGrid for delivery, but this is easy changed.
+For mailings related to Rails apps, email_campaign is designed to be a more flexible, more integrated (yet well-abstracted) alternative to email campaign services like Campaign Monitor and MailChimp. Developed using {SendGrid}[http://sendgrid.com/] for delivery (via the ActionMailer::Base.smtp_settings), but feel free to use whatever you want.
 
 =Roadmap
 
