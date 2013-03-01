@@ -108,6 +108,40 @@ Finally, create an initializer that sets base_url (since urls in emails need to 
   # EmailCampaign::Handler as it would appear in url_for(:controller => '...')
   EmailCampaign::Config.controller_name = 'email'
 
+Okay, now how do we actually send this thing? You'll want to make a controller for this eventually, but for now let's use the console:
+
+  # create a campaign, making sure to specify the mailer class and method we created earlier
+  c = EmailCampaign::Campaign.find_or_create_by_name(:name => 'Campaign 2013a')
+  c.mailer = 'Campaign'
+  c.method = 'campaign2013a'
+  c.save
+  
+  # recipients can be any object that responds to #name, #email_address and #id (or optionally, #subscriber_id)
+  class TestRecipient
+    attr_accessor :name, :email_address, :subscriber_id
+    def initialize(name, email_address, subscriber_id)
+      @name = name ; @email_address = email_address ; @subscriber_id = subscriber_id
+    end
+  end
+    
+  rcpts = [ TestRecipient.new('Aaron Namba', 'aaron@mysite.com', 1) ]
+  
+  # this will create EmailCampaign::Recipient objects (c.recipients), which contain delivery status
+  # information (e.g. #delivered, #failed, #failure_reason, #opened, #clicked)
+  counts = c.add_recipients(rcpts, :force => true)
+  
+  if c.queue
+    # use dj to send in 5 minutes; deliver! also uses dj to queue up individual emails
+    c.delay(:run_at => 5.minutes.from_now).deliver!
+    puts "Emails queued for immediate delivery. #{counts[:processed]} processed, #{counts[:skipped]} skipped, #{counts[:valid]} valid, #{counts[:invalid]} invalid, #{counts[:duplicate]} duplicate, #{counts[:unsubscribed]} unsubscribed, #{counts[:total]} total in queue."
+  end
+
+Start dj if you haven't already:
+
+  script/delayed_job start
+
+
+
 =Getting Help
 
 Get paid support for EmailCampaign straight from the people who made it: {Bigger Bird Creative, Inc.}[https://www.biggerbird.com] Not required, of course. :-) Free support is up top (Issues).
