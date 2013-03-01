@@ -1,6 +1,10 @@
 module EmailCampaign
   module Handler
     
+    def self.included(base)
+      EmailCampaign::Config.controller_name = base.controller_name
+    end
+    
     def open
       EmailCampaign::Recipient.record_open(params[:k]) if params[:k]
       
