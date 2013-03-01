@@ -2,17 +2,111 @@
 
 For mailings related to Rails apps, email_campaign is designed to be a more flexible, more integrated (yet well-abstracted) alternative to email campaign services like Campaign Monitor and MailChimp. Designed to use SendGrid for delivery, but this is easy changed.
 
-Does its best to prevent clients from sending too frequently and ruining your sender reputation, but no guarantees.
-
 =Roadmap
 
-0.x: Basic campaign authoring and delivery, using template created by developer as a standard Rails mailer layout.
+0.x: Basic campaign authoring, delivery and tracking.
 1.0: Robust enough for production use, will be able to deal with 90% of common failure modes on its own.
 1.2: Delivery stats and graphs.
 
 =Current Status
 
 Still pre-1.0. If you have some time, write some code or tests, exercise existing functionality on non-critical apps, submit bug reports... otherwise stay away for now.
+
+=How to Use
+
+Add to Gemfile and install:
+
+  gem 'email_campaign'
+  
+  # required
+  gem 'delayed_job'
+  gem 'daemons'
+  
+  # pick a dj backend (we'll assume ActiveRecord, but there are others):
+  gem 'delayed_job_active_record
+  
+  # recommended but not required
+  gem 'sanitize_email'
+  gem 'inline-style'
+
+Run migrations:
+
+  rake email_campaign:install:migrations
+  rails generate delayed_job:active_record
+  rake db:migrate
+
+Create a mailer, be sure to use EmailCampaign::EmailHelper:
+
+  class Campaign < ActionMailer::Base
+    default from: 'me@mysite.com'
+    helper EmailCampaign::EmailHelper
+    layout 'campaign'
+    
+    def campaign2013a(recipient)
+      # @method, and @identifier are used by our EmailHelper for tracking
+      @method = __method__
+      @identifier = recipient.identifier
+      
+      # @subject is used so we can use the same template for email and web
+      @subject = 'First mailing with email_campaign'
+      mail(:to => recipient.to_s, :subject => @subject)
+    end
+  end
+
+Add some of these to your mailer layout and template:
+
+  <!-- web version link -->
+  <%- if @identifier -%>
+  <div id="top-notice">
+    Not seeing any images in this email? <a href="<%= email_web_version_url %>">View it online &raquo;</a>
+  </div>
+  <%- end -%>
+
+  <!-- trackable link -->
+  <%= email_link_url('http://www.mysite.com/') %>
+
+  <!-- unsubscribe link -->
+  <%- if @identifier -%>
+    <p>If you do not wish to receive these emails, you may <a href="<%= email_unsubscribe_url %>">unsubscribe now</a>.</p>
+  <%- end -%>
+
+  <!-- inserts invisible tracking image to track opens -->
+  <%= email_tracking_tag %>
+
+You'll need a controller to handle tracking, unsubscribe/resubscribe and web versions.
+
+  class EmailController < ApplicationController
+    # reuse the email layout (optional, but recommended)
+    layout 'campaign'
+    
+    # include the helper, just like we did in the mailer
+    helper EmailCampaign::EmailHelper
+    
+    # adds #open, #link, #unsubscribe/#resubscribe, #web_version
+    include EmailCampaign::Handler
+    
+    # must be named the same way as your mailer method
+    # Again, @method is used for tracking, and  @subject is used so we can use the same template for email and web.
+    # Here, we copy the subject directly from the mailer. Not pretty, but does avoid duplication.
+    def campaign2013a
+      @method = __method__
+      @subject = Campaign.send(__method__, EmailCampaign::Recipient.new).subject
+      render :template => '/campaign/campaign2013a'
+    end
+  end
+
+Add routes. In this case, the old-style default works well:
+
+  match 'email(/:action(/:id))' => 'email'
+
+Finally, create an initializer that sets base_url (since urls in emails need to include hostname and protocol) and optionally controller_name (to tell email_campaign about the controller you created above):
+
+  # Set base url that will be prepended to url paths in emails
+  EmailCampaign::Config.base_url = ENV['BaseURL'] || 'http://mysite.com'
+  
+  # (Optional, can be auto-detected) Specify the name of the controller that includes
+  # EmailCampaign::Handler as it would appear in url_for(:controller => '...')
+  EmailCampaign::Config.controller_name = 'email'
 
 =Getting Help
 
