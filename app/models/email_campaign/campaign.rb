@@ -35,7 +35,7 @@ class EmailCampaign::Campaign < ActiveRecord::Base
       end
       
       processed += 1
-      r = recipients.build(:name => rcpt.name.strip, :email_address => rcpt.email_address.strip,
+      r = recipients.build(:name => rcpt.name, :email_address => rcpt.email_address,
                            :subscriber_class_name => rcpt.class.name, :subscriber_id => subscriber_id)
       if r.save
         case

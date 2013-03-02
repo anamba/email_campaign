@@ -41,7 +41,7 @@ class EmailCampaign::Recipient < ActiveRecord::Base
   end
   
   def check_name
-    self.name = nil if name.blank?
+    self.name = name.blank? ? nil : name.strip
     
     true
   end
@@ -58,6 +58,8 @@ class EmailCampaign::Recipient < ActiveRecord::Base
   end
   
   def check_email_address
+    self.email_address = email_address.blank? ? nil : email_address.strip
+    
     if valid_email_address?(email_address)
       self.invalid_email = false
     else
