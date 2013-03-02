@@ -11,7 +11,7 @@ class EmailCampaign::Campaign < ActiveRecord::Base
   # (falls back to #id if #subscriber_id doesn't exist; either way, id should be unique within campaign)
   def add_recipients(new_recipients, options = {})
     options.stringify_keys!
-    new_recipients = [ new_recipients ] unless new_recipients.is_a?(Array)
+    new_recipients = [ new_recipients ] unless new_recipients.respond_to?(:each)
     
     processed = 0
     skipped = 0
