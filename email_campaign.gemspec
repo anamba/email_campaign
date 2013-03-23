@@ -28,7 +28,7 @@ Gem::Specification.new do |s|
   s.require_paths = ["lib"]
   
   s.add_dependency "actionmailer",        "~> 3.2.12"
-  s.add_dependency "mail",                "~> 2.4.0"
+  s.add_dependency "mail",                "~> 2.4"
   s.add_dependency "delayed_job",         "~> 3.0.0"
   s.add_dependency "net-dns",             "~> 0.7.0"
   
