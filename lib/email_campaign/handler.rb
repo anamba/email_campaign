@@ -8,26 +8,8 @@ module EmailCampaign
     def open
       EmailCampaign::Recipient.record_open(params[:k]) if params[:k]
       
-      options = {}
-      options[:disposition] = 'inline'
-      path = File.join(Rails.root, 'public/assets/email_campaign/open-tracker.gif')
-      send_file path, options
-    end
-    
-    # deprecated, remove after 4/1/2013
-    def asset
-      EmailCampaign::Recipient.record_open(params[:k]) if params[:k]
-      
-      options = {}
-      options[:disposition] = [ 'jpg', 'jpeg', 'gif', 'png' ].include?(params[:format].downcase) ? 'inline' : 'attachment'
-      
-      path = File.join(Rails.root, 'app', 'assets', 'images', 'email', params[:method].to_s, params[:filename] + '.' + params[:format])
-      if !File.exists?(path)
-        path = File.join(Rails.root, 'app', 'assets', 'images', 'email', params[:filename] + '.' + params[:format])
-      end
-      render :text => 'Not Found', :status => 404 and return if !File.exists?(path)
-      
-      send_file path, options
+      send_file File.join(Rails.root, 'public', view_context.path_to_image('email_campaign/open-tracker.gif')),
+                disposition: 'inline'
     end
     
     def link
@@ -39,7 +21,7 @@ module EmailCampaign
       if params[:k]
         @success = EmailCampaign::Recipient.unsubscribe(params[:k])
       else
-        render :text => "No subscriber identifier given, cannot continue."
+        render :text => "Cannot unsubscribe you without a subscriber ID, please check the link and try again."
       end
     end
     
@@ -47,7 +29,7 @@ module EmailCampaign
       if params[:k]
         @success = EmailCampaign::Recipient.resubscribe(params[:k])
       else
-        render :text => "No subscriber identifier given, cannot continue."
+        render :text => "Cannot re-subscribe you without a subscriber ID, please check the link and try again."
       end
     end
     

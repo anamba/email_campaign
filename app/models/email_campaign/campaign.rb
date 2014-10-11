@@ -1,9 +1,9 @@
 class EmailCampaign::Campaign < ActiveRecord::Base
   self.table_name = 'email_campaigns'
   
-  attr_accessible :name, :mailer, :method, :params_yaml, :deliver_at,
-                  :finalized, :queued, :delivered,
-                  :delivery_started_at, :delivery_finished_at
+  # attr_accessible :name, :mailer, :method, :params_yaml, :deliver_at,
+  #                 :finalized, :queued, :delivered,
+  #                 :delivery_started_at, :delivery_finished_at
   
   has_many :recipients, :class_name => 'EmailCampaign::Recipient', :foreign_key => 'email_campaign_id'
   
@@ -42,13 +42,16 @@ class EmailCampaign::Campaign < ActiveRecord::Base
           when r.unsubscribed then unsubscribed += 1
           when r.duplicate then duplicate += 1
           when r.invalid_email then invalid += 1
-          else valid += 1
+          else
+            if r.queue
+              valid += 1
+            else
+              invalid += 1
+            end
         end
       else
         invalid += 1
       end
-      
-      r.queue
     end
     
     { :processed => processed, :skipped => skipped,
